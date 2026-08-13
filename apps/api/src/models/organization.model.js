@@ -1,4 +1,4 @@
-const monggoose = require('mongoose')
+const mongoose = require('mongoose')
 const { timeStamp } = require('node:console')
 
 
@@ -19,10 +19,6 @@ const organizationSchema = new mongoose.Schema({
       enum: ['active', 'inactive', 'suspended', 'cancelled'],
       default: 'active'
     },
-     stripeCustomerId: {
-    type: String,
-    default: null
-  },
     trialEnd: { type: Date, default: null },
     currentPeriodStart: { type: Date, default: null },
     currentPeriodEnd: { type: Date, default: null },
