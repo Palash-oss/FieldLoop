@@ -44,7 +44,7 @@ const organizationSchema = new mongoose.Schema({
     default: 'UTC'
   }
     
-},{timeStamps:true});
+},{timestamps:true});
 
 
 module.exports = mongoose.model('Organization',organizationSchema);

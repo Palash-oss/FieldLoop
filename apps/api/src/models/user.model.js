@@ -19,7 +19,7 @@ const userSchema= new mongoose.Schema({
       required:[true,'Email is required'],
       unique:true,
       lowercase:true,
-      trime:true,
+      trim:true,
       
     },
     password:{
@@ -30,7 +30,7 @@ const userSchema= new mongoose.Schema({
     role:{
         type:String,
         enum: ['OWNER', 'DISPATCHER', 'TECHNICIAN', 'ACCOUNTANT'],
-        default:'USER'
+        default:'TECHNICIAN'
     },
     phone: {
     type: String,
@@ -44,8 +44,8 @@ const userSchema= new mongoose.Schema({
     default: true
   },
   currentLocation:{
-    lat:{type:number},
-    lng:{type:number},
+    lat:{type:Number},
+    lng:{type:Number},
     updatedAt:{type:Date}
   }
     

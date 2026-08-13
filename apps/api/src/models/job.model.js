@@ -17,12 +17,12 @@ const jobSchema = new mongoose.Schema({
         required:true,
         index:true,
     },
-    assignedTechnicians:{
+    assignedTechnicians:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:'User',
         required:true,
         index:true,
-    },
+    }],
     serviceType:{
         type:String,
         required:[true,'Service type required (eg. Plumbing, HVAC, Repair'],
