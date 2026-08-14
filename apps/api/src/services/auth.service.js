@@ -17,6 +17,12 @@ class AuthService{
         name:orgName,
         plan:'STARTER',
         subscriptionStatus:'TRIALING',
+         planDetails: {
+    maxUsers: 5,
+    maxProjects: 50,
+    maxReports: 10,
+    features: ['BASIC_SCHEDULING', 'INVOICING']
+  }
       })
   // 3. Create the Owner User linked to the Organization
       const user = await User.create({
