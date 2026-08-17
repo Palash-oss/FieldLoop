@@ -92,17 +92,12 @@ const customer = await Customer.findOne({ _id: customerId, organizationId });
   /**
    * Delete Customer (Soft Delete)
    */
-  async deleteCustomer(organizationId, customerId) {
-    const customer = await Customer.findOneAndUpdate(
-      { _id: customerId, organizationId },
-      { isDeleted: true, deletedAt: new Date() },
-      { new: true }
-    );
-
+ async deleteCustomer(organizationId, customerId) {
+    const customer = await Customer.findOneAndDelete({ _id: customerId, organizationId });
     if (!customer) {
-      throw new Error('Customer not found');
+      throw new Error('Customer not found or access denied');
     }
-    return customer;
+    return { message: 'Customer deleted successfully' };
   }
-
 }
+module.exports = new CustomerService();

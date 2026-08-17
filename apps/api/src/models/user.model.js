@@ -29,7 +29,15 @@ const userSchema= new mongoose.Schema({
     },
     role:{
         type:String,
-        enum: ['OWNER', 'DISPATCHER', 'TECHNICIAN', 'ACCOUNTANT'],
+        enum: [
+    'OWNER',         // Business Owner (Full access)
+    'MANAGER',       // Operations / Branch Manager
+    'DISPATCHER',    // Office Dispatcher (Schedules & assigns jobs)
+    'TECHNICIAN',    // Primary Field Technician
+    'APPRENTICE',    // Junior / Helper Technician
+    'SUBCONTRACTOR', // External Contractor hired for overflow work
+    'ACCOUNTANT'     // Billing / Finance clerk
+  ],
         default:'TECHNICIAN'
     },
     phone: {
