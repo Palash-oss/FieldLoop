@@ -19,22 +19,33 @@ class UserController{
             })
         }
      }
-       // GET /api/v1/users (Get all staff)
-       async getAll(req,res){
-        try{
-            const{role,isAvailable}=req.query;
-            const users = await userService.getUsers(req.orgId,{role,isAvaliable});
-            return res.status(200).json({
-                status:'success',
-                 results: users.length,
-                   data: users
-
-            })
-        }
-        catch (error) {
+  // GET /api/v1/users (Get all staff)
+  async getAll(req, res) {
+    try {
+      const { role, isAvailable } = req.query;
+      const users = await userService.getUsers(req.orgId, { role, isAvailable });
+      return res.status(200).json({
+        status: 'success',
+        results: users.length,
+        data: users
+      });
+    } catch (error) {
       return res.status(400).json({ status: 'fail', message: error.message });
     }
-       }
+  }
+
+  // GET /api/v1/users/:id (Get single staff member)
+  async getOne(req, res) {
+    try {
+      const user = await userService.getUserById(req.orgId, req.params.id);
+      return res.status(200).json({
+        status: 'success',
+        data: user
+      });
+    } catch (error) {
+      return res.status(404).json({ status: 'fail', message: error.message });
+    }
+  }
 
 
         // PUT /api/v1/users/:id (Update staff member)
