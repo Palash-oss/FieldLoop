@@ -1,7 +1,11 @@
 const mongoose = require('mongoose')
 
-
-
+const statusHistorySchema = new mongoose.Schema({
+  status: { type: String, required: true },
+  changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  timestamp: { type: Date, default: Date.now },
+  note: { type: String },
+}, { _id: false });
 
 const jobSchema = new mongoose.Schema({
     organizationId:{
@@ -10,7 +14,6 @@ const jobSchema = new mongoose.Schema({
         required:true,
         index:true
     },
-    
     customerId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:'Customer',
@@ -20,71 +23,68 @@ const jobSchema = new mongoose.Schema({
     assignedTechnicians:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:'User',
-        required:true,
         index:true,
     }],
     serviceType:{
         type:String,
-        required:[true,'Service type required (eg. Plumbing, HVAC, Repair'],
+        required:[true,'Service type required'],
         trim:true,
     },
     description:{
         type:String,
     },
-    //job cycle when to keep paid no paid cancel
     status:{
         type:String,
-        enum:[  'REQUESTED',   // Customer requested service
-      'SCHEDULED',   // Assigned to calendar & technician
-      'EN_ROUTE',    // Technician travelling to site
-      'IN_PROGRESS', // Technician working on-site
-      'COMPLETED',   // Job done
-      'INVOICED',    // Invoice generated
-      'PAID',        // Customer paid
-      'CANCELLED'    // Cancelled
-      ],
+        enum:[
+          'REQUESTED',
+          'SCHEDULED',
+          'EN_ROUTE',
+          'IN_PROGRESS',
+          'COMPLETED',
+          'INVOICED',
+          'PAID',
+          'CANCELLED',
+          'NEEDS_FOLLOWUP'
+        ],
         default:'REQUESTED',
         index:true,
     },
-      scheduledStart: {
-    type: Date
-  },
-  scheduledEnd: {
-    type: Date
-  },
-   address: {
-    street: String,
-    city: String,
-    state: String,
-    zip: String,
-    lat: Number,
-    lng: Number
-  },
-  priceEstimate:{
-    type:Number,
-    default:0,
-  },
-  partsUsed:[
-    {
-        name:String,
-          quantity: { type: Number, default: 1 },
-    unitCost: { type: Number, default: 0 },
-    }
-  ],
-  priority:{
-    type:String,
-    enum:['LOW','MEDIUM','HIGH','URGENT'],
-    default:'MEDIUM',
-    index:true,
-  },
-  signatureUrl:{
-    type:String,
-  },
-  photos: [{
-    type: String // URLs of before/after photos uploaded by technician
-  }]
-    
+    statusHistory: [statusHistorySchema],
+    scheduledStart: { type: Date },
+    scheduledEnd: { type: Date },
+    assignedAt: { type: Date },
+    completedDate: { type: Date },
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      zip: String,
+      lat: Number,
+      lng: Number
+    },
+    priceEstimate:{
+      type:Number,
+      default:0,
+    },
+    partsUsed:[
+      {
+        name: String,
+        quantity: { type: Number, default: 1 },
+        unitCost: { type: Number, default: 0 },
+      }
+    ],
+    priority:{
+      type:String,
+      enum:['LOW','MEDIUM','HIGH','URGENT'],
+      default:'MEDIUM',
+      index:true,
+    },
+    signatureUrl:{
+      type:String,
+    },
+    photos: [{
+      type: String
+    }]
 }, { timestamps: true })
 
-
-module.exports = mongoose.model('Job',jobSchema);
+module.exports = mongoose.model('Job', jobSchema);

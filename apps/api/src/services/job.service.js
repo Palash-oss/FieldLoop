@@ -1,53 +1,56 @@
 const Job = require('../models/job.model');
 const Customer = require('../models/customer.model');
 const User = require('../models/user.model');
+const { validateTransition, createHistoryEntry } = require('./job.statemachine');
 
 class JobService {
   /**
    * Create and Dispatch a Job
    */
-  async createJob(organizationId, jobData) {
-    // 1. Verify that the Customer exists in this organization
+  async createJob(organizationId, jobData, userId) {
+    // 1. Verify customer belongs to this org
     const customer = await Customer.findOne({ _id: jobData.customerId, organizationId });
     if (!customer) {
       throw new Error('Invalid customer ID for this organization');
     }
 
-    // 2. If technicians are assigned, verify they exist & belong to this organization
+    // 2. Verify assigned technicians belong to this org
     if (jobData.assignedTechnicians && jobData.assignedTechnicians.length > 0) {
       const techCount = await User.countDocuments({
         _id: { $in: jobData.assignedTechnicians },
         organizationId
       });
       if (techCount !== jobData.assignedTechnicians.length) {
-        throw new Error('One or more assigned technicians are invalid or belong to another organization');
+        throw new Error('One or more technicians are invalid or belong to another organization');
       }
     }
 
-    // 3. Create the Job in MongoDB
+    // 3. Determine initial status
+    const initialStatus = jobData.assignedTechnicians?.length > 0 ? 'SCHEDULED' : 'REQUESTED';
+
+    // 4. Create with initial status history entry
     const job = await Job.create({
       organizationId,
       ...jobData,
-      status: jobData.assignedTechnicians?.length > 0 ? 'SCHEDULED' : 'REQUESTED'
+      status: initialStatus,
+      assignedAt: initialStatus === 'SCHEDULED' ? new Date() : undefined,
+      statusHistory: [createHistoryEntry(initialStatus, userId)],
     });
 
-    // 4. Replace customer ID with actual Customer details before returning
-    return await job.populate('customerId', 'name phone address');
+    return await job.populate([
+      { path: 'customerId', select: 'name phone address' },
+      { path: 'assignedTechnicians', select: 'name phone role' },
+    ]);
   }
 
   /**
-   * Get all Jobs for Organization with Status & Date Filters
+   * Get all Jobs for Organization with filters
    */
   async getJobs(organizationId, { status, technicianId, startDate, endDate, page = 1, limit = 10 }) {
     const query = { organizationId };
 
-    if (status) {
-      query.status = status.toUpperCase();
-    }
-
-    if (technicianId) {
-      query.assignedTechnicians = technicianId;
-    }
+    if (status) query.status = status.toUpperCase();
+    if (technicianId) query.assignedTechnicians = technicianId;
 
     if (startDate || endDate) {
       query.scheduledStart = {};
@@ -68,70 +71,80 @@ class JobService {
 
     return {
       jobs,
-      pagination: {
-        total,
-        page: Number(page),
-        pages: Math.ceil(total / limit)
-      }
+      pagination: { total, page: Number(page), pages: Math.ceil(total / limit) }
     };
   }
 
   /**
-   * Get Technician's Assigned Jobs (Mobile App View)
+   * Get Technician's Assigned Jobs (Mobile App)
    */
   async getMyJobs(organizationId, technicianId) {
-    const jobs = await Job.find({
+    return await Job.find({
       organizationId,
       assignedTechnicians: technicianId,
-      status: { $ne: 'CANCELLED' }
+      status: { $nin: ['CANCELLED', 'PAID'] }
     })
       .populate('customerId', 'name phone address')
       .sort({ scheduledStart: 1 });
-
-    return jobs;
   }
 
   /**
-   * Get Single Job Details
+   * Get Single Job
    */
   async getJobById(organizationId, jobId) {
     const job = await Job.findOne({ _id: jobId, organizationId })
       .populate('customerId')
       .populate('assignedTechnicians', 'name phone role skills');
 
-    if (!job) {
-      throw new Error('Job not found');
-    }
-
+    if (!job) throw new Error('Job not found');
     return job;
   }
 
   /**
-   * Update Job Status (State Machine Transition: EN_ROUTE -> IN_PROGRESS -> COMPLETED)
+   * Transition Job Status — uses state machine for validation
+   * @param {string} organizationId
+   * @param {string} jobId
+   * @param {string} newStatus
+   * @param {string} userId - who is making the change
+   * @param {object} extras - { partsUsed, signatureUrl, photos, note }
    */
-  async updateJobStatus(organizationId, jobId, status, { partsUsed, signatureUrl, photos }) {
+  async transitionJobStatus(organizationId, jobId, newStatus, userId, extras = {}) {
     const job = await Job.findOne({ _id: jobId, organizationId });
-    if (!job) {
-      throw new Error('Job not found');
+    if (!job) throw new Error('Job not found');
+
+    // Validate transition via state machine
+    const { valid, message } = validateTransition(job.status, newStatus);
+    if (!valid) {
+      throw new Error(message);
     }
 
-    const validStatuses = ['REQUESTED', 'SCHEDULED', 'EN_ROUTE', 'IN_PROGRESS', 'COMPLETED', 'INVOICED', 'PAID', 'CANCELLED'];
-    if (!validStatuses.includes(status)) {
-      throw new Error('Invalid job status');
+    // Apply transition
+    job.status = newStatus;
+    job.statusHistory.push(createHistoryEntry(newStatus, userId, extras.note));
+
+    // Side-effects based on new status
+    if (newStatus === 'COMPLETED') {
+      job.completedDate = new Date();
+    }
+    if (newStatus === 'SCHEDULED' && !job.assignedAt) {
+      job.assignedAt = new Date();
     }
 
-    job.status = status;
-
-    if (partsUsed) job.partsUsed = partsUsed;
-    if (signatureUrl) job.signatureUrl = signatureUrl;
-    if (photos) job.photos = photos;
+    // Optional field updates on completion
+    if (extras.partsUsed) job.partsUsed = extras.partsUsed;
+    if (extras.signatureUrl) job.signatureUrl = extras.signatureUrl;
+    if (extras.photos) job.photos = extras.photos;
 
     await job.save();
-    return job;
+
+    return await job.populate([
+      { path: 'customerId', select: 'name phone address' },
+      { path: 'assignedTechnicians', select: 'name phone role' },
+    ]);
   }
 
   /**
-   * Update Job Schedule or Details
+   * Update Job Details (schedule, description, technicians, etc.)
    */
   async updateJob(organizationId, jobId, updateData) {
     const job = await Job.findOneAndUpdate(
@@ -140,21 +153,16 @@ class JobService {
       { new: true, runValidators: true }
     ).populate('customerId').populate('assignedTechnicians', 'name phone');
 
-    if (!job) {
-      throw new Error('Job not found or access denied');
-    }
-
+    if (!job) throw new Error('Job not found or access denied');
     return job;
   }
 
   /**
-   * Delete / Cancel Job
+   * Delete Job
    */
   async deleteJob(organizationId, jobId) {
     const job = await Job.findOneAndDelete({ _id: jobId, organizationId });
-    if (!job) {
-      throw new Error('Job not found or access denied');
-    }
+    if (!job) throw new Error('Job not found or access denied');
     return { message: 'Job deleted successfully' };
   }
 }
