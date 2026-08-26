@@ -20,7 +20,7 @@
 
     --text-primary:  #0F0F0F;
     --text-secondary:#333333;
-    --text-muted:    #666666;
+    --text-muted:    #444444;
 
     --border:        #0F0F0F;
     --border-hover:  #0F0F0F;
@@ -109,7 +109,7 @@
 .btn-amber {
   background-color: #0F0F0F !important;
   color: #FFFDF2 !important;
-  font-weight: 700;
+  font-weight: 800;
   border: 2px solid #0F0F0F !important;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -127,7 +127,7 @@
   background: #FFFDF2 !important;
   color: #0F0F0F !important;
   border: 2px solid #0F0F0F !important;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -136,7 +136,7 @@
   color: #FFFDF2 !important;
 }
 
-/* ── Form Inputs ── */
+/* ── Form Inputs & Select Dropdowns ── */
 .input-field {
   width: 100%;
   background-color: #FFFDF2 !important;
@@ -144,9 +144,19 @@
   border-radius: 0.5rem;
   color: #0F0F0F !important;
   font-size: 0.875rem;
+  font-weight: 700 !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.input-field::placeholder { color: #666666 !important; }
+.input-field::placeholder {
+  color: #222222 !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+.input-field option {
+  background-color: #FFFDF2 !important;
+  color: #0F0F0F !important;
+  font-weight: 700 !important;
+}
 .input-field:focus {
   outline: none;
   box-shadow: 3px 3px 0px #0F0F0F;
@@ -177,7 +187,12 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #333333 !important;
+}
+
+/* ── Table Headers ── */
+thead th {
+  color: #FFFDF2 !important;
+  font-weight: 800 !important;
 }
 
 /* ── Table Row Hover ── */
